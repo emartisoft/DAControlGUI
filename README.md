@@ -20,3 +20,5 @@ Enjoy it!
 	(*) That's why this app was created. :)
   
   
+<br><br>
+![main](https://raw.githubusercontent.com/emartisoft/DAControlGUI/main/screenshot/main.png)
