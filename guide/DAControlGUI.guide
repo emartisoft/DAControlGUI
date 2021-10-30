@@ -1,0 +1,73 @@
+@DATABASE DAControlGUI.guide
+@AUTHOR "emarti, Murat Ozdemir"
+@REMARK *--------------------------------------------------------------------*
+@$VER: DAControlGUI.guide 1.0 (30.10.2021) by emarti, Murat Ozdemir
+@REMARK *--------------------------------------------------------------------*
+@NODE Main "DAControlGUI Guide"
+
+														
+
+		     @{b}@{fg highlight}DAControlGUI 1.0, Guide for users@{fg text}@{ub}
+
+	As you know DAControl & trackfile.device provide unprecedented functionality, 
+	as they enable users to create, mount, insert and eject ADF files. 
+	
+	DAControlGUI provides graphical unit interface for this. 
+	Tested on Amiga OS3.2 only.
+
+	Enjoy it!
+
+
+@{ub}
+	@{" Features          " link FEATURES} 
+	@{" Version History   " link HISTORY}  
+	@{" Contact           " link CONTACT}  
+
+@ENDNODE
+
+@REMARK *--------------------------------------------------------------------*	
+
+@node FEATURES
+@title "Features"
+
+	@{b}Features@{ub}
+	1. Loads a specific ADF file and mounts it. (To mount ADF image by double-clicking on it) 
+	2. Removes an ADF file from a unit and then loads a new ADF file.
+	3. Ejects an / Eject All ADF file. (*)
+	4. Displays list of mounted devices.
+	5. Creates ADF image.
+	6. Iconify / Uniconify on workbench.
+
+	(*) That's why this app was created. :)
+
+@endnode
+@REMARK *--------------------------------------------------------------------*	
+
+@node HISTORY
+@title "Version History"
+
+	@{b}Version History@{ub}
+
+	1.0 : First release (29.10.2021)
+
+@endnode
+@REMARK *--------------------------------------------------------------------*	
+
+@node CONTACT
+@title "Contact"
+
+	@{b}Contact@{ub}
+
+	Coder:
+	  emarti, Murat Ozdemir
+
+	e-mail: 
+	  dtemarti@gmail.com
+
+	WebSite: 
+	  https://github.com/emartisoft/DAControlGUI
+	  http://csdb.dk/scener/?id=26786
+
+@endnode
+@REMARK *--------------------------------------------------------------------*	
+

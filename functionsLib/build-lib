@@ -1,0 +1,4 @@
+; to create functions.lib
+sc functions.c
+oml functions.lib r functions.o
+copy functions.lib /src
