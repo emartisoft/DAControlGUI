@@ -48,8 +48,12 @@
 
 	@{b}Version History@{ub}
 
+	1.0.0411 : 
+		Fixed a bug in the file selector. [Thanks to Alexander]
+		Added 'Refresh' menu
+	
 	1.0 : First release (29.10.2021)
-
+	
 @endnode
 @REMARK *--------------------------------------------------------------------*	
 
