@@ -519,6 +519,9 @@ void ProcessMenuIDCMPdacMenu(UWORD MenuNumber)
 						break;
 					case ControlsEjectAll :
 							clickEjectAll();
+						break;		
+					case ControlsRefresh :
+							createADFList();
 						break;
 				}
 				break;
@@ -550,7 +553,7 @@ void About(void)
         sizeof(struct EasyStruct),
         0,
         "About",
-        "DAControlGUI 1.0 (C) 2021\nCoded by emarti, Murat OZDEMIR\n\nWebSite:\nhttps://github.com/emartisoft/DAControlGUI",
+        "DAControlGUI 1.0.0411 (C) 2021\nCoded by emarti, Murat OZDEMIR\n\nWebSite:\nhttps://github.com/emartisoft/DAControlGUI",
         "Ok"
     };
     EasyRequest(WindowPtr, &aboutReq, NULL, NULL);
@@ -875,14 +878,14 @@ void loadChangeAdfWin(void)
 
 							if(!mounted)
 							{
-								sprintf(cmd, "LOAD ""%s"" DEVICE DA%d: WRITEPROTECTED=""%s"" QUIET IGNORE >NIL:", gFullFilename, deviceNo, (writeProtected) ? "YES" : "NO");
+								sprintf(cmd, "LOAD \"%s\" DEVICE DA%d: WRITEPROTECTED=""%s"" QUIET IGNORE >NIL:", gFullFilename, deviceNo, (writeProtected) ? "YES" : "NO");
 								RunDAControl(cmd);
 							}
 							else
 							{
 								sprintf(cmd, "EJECT DEVICE DA%d: SAFEEJECT=YES TIMEOUT 15 QUIET >NIL:", deviceNo);
 								RunDAControl(cmd);
-								sprintf(cmd, "CHANGE DEVICE DA%d: WRITEPROTECTED=""%s"" ""%s"" QUIET >NIL:", deviceNo, (writeProtected) ? "YES" : "NO", gFullFilename);
+								sprintf(cmd, "CHANGE DEVICE DA%d: WRITEPROTECTED=""%s"" \"%s\" QUIET >NIL:", deviceNo, (writeProtected) ? "YES" : "NO", gFullFilename);
 								RunDAControl(cmd);
 							}
 							doneLoadAdf = TRUE;
@@ -1109,13 +1112,13 @@ void createAdfWin(void)
 							GetAttr(CHOOSER_Selected, co[5], (ULONG*)&idx);
 								
 							// creating adf...
-							sprintf(cmd, "CREATE LABEL=""%s"" DISKTYPE ""%s"" DEVICE DA%d: ""%s"" QUIET >NIL:", labelstr, disktype[idx], cdeviceNo, cgFullFilename);
+							sprintf(cmd, "CREATE LABEL=\"%s\" DISKTYPE ""%s"" DEVICE DA%d: \"%s\" QUIET >NIL:", labelstr, disktype[idx], cdeviceNo, cgFullFilename);
 							RunDAControl(cmd);
 							// to display in list (because volumename column value is "-")
 							// eject + change
 							sprintf(cmd, "EJECT DEVICE DA%d: SAFEEJECT=YES TIMEOUT 15 QUIET >NIL:", cdeviceNo);
 							RunDAControl(cmd);
-							sprintf(cmd, "CHANGE DEVICE DA%d: ""%s"" WRITEPROTECTED=""%s"" QUIET >NIL:", cdeviceNo, cgFullFilename, (cwriteProtected) ? "YES" : "NO");
+							sprintf(cmd, "CHANGE DEVICE DA%d: \"%s\" WRITEPROTECTED=""%s"" QUIET >NIL:", cdeviceNo, cgFullFilename, (cwriteProtected) ? "YES" : "NO");
 							RunDAControl(cmd);
                             doneCreateAdf = TRUE;
                         break;

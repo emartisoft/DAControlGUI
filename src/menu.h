@@ -13,6 +13,8 @@
 #define ControlsBar2 2
 #define ControlsEject 3
 #define ControlsEjectAll 4
+#define ControlsBar3 5
+#define ControlsRefresh	6
 //-------------------------------
 #define HelpMenu 2
 #define HelpMenuManual 0
@@ -30,6 +32,8 @@ struct NewMenu dacMenuNewMenu[] =
 	NM_ITEM , NM_BARLABEL                          	,  NULL , 0, 0L, (APTR)~0,
 	NM_ITEM , (STRPTR)"Eject ADF"                 	,  "E" , 0, 0L, (APTR)~0,
     NM_ITEM , (STRPTR)"Eject All"            		,  "A" , 0, 0L, (APTR)~0,
+	NM_ITEM , NM_BARLABEL                          	,  NULL , 0, 0L, (APTR)~0,
+	NM_ITEM , (STRPTR)"Refresh"                 	,  "R" , 0, 0L, (APTR)~0,
     
     NM_TITLE, (STRPTR)"Help"                       ,  NULL , 0, NULL, (APTR)~0,
     NM_ITEM , (STRPTR)"Manual"                      ,  "M" , 0, 0L, (APTR)~0,
