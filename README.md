@@ -19,6 +19,13 @@ Enjoy it!
 
 	(*) That's why this app was created. :)
   
-  
+
 <br><br>
 ![main](https://raw.githubusercontent.com/emartisoft/DAControlGUI/main/screenshot/main.png)
+<br>Main Screen
+<br><br>
+![load](https://raw.githubusercontent.com/emartisoft/DAControlGUI/main/screenshot/loadAdf.png)
+<br>Load ADF Image
+<br><br>
+![create](https://raw.githubusercontent.com/emartisoft/DAControlGUI/main/screenshot/createAdf.png)
+<br>Create ADF Image
