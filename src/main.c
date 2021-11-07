@@ -91,6 +91,14 @@ void setDisable(struct Gadget* gad, BOOL value);
 void createADFList(void);
 void buttonsDisable(BOOL b);
 
+#define PREFFILEPATH	"SYS:Prefs/Env-Archive/DAControlGUI.prefs"
+void SavePrefs(void);
+void LoadPrefs(void);
+void Prefs(void);
+char loadChangeFileReqPath[BUFFERSIZE];
+char createFileReqPath[BUFFERSIZE];
+UWORD appLeft, appTop, appWidth, appHeight;
+
 /*
 // Hook is used to add device to list for IDCMP_DISKINSERTED and IDCMP_DISKREMOVED but it is NOT stable.
 ULONG HookFunc(struct Hook *h, VOID *o, VOID *msg);
@@ -140,6 +148,19 @@ int main(void)
        AppTerminate();
        return --ret;
     }
+
+	if(!fileExist(PREFFILEPATH))
+	{
+		strcpy(loadChangeFileReqPath, "RAM:Empty.adf");
+		strcpy(createFileReqPath, "RAM:Empty.adf");
+		appLeft = 50;
+		appTop = 50;
+		appWidth = 450;
+		appHeight = 250;
+		SavePrefs();
+	}
+		
+	LoadPrefs();
 	
 	OPENLIB(Window,     "window.class");
     OPENLIB(Layout,     "gadgets/layout.gadget");	
@@ -166,7 +187,6 @@ int appMain()
 	ULONG result;
 	UWORD code;
 	ULONG signal;
-	
 
 	ScreenPtr = LockPubScreen(NULL);
     VisualInfoPtr = GetVisualInfo(ScreenPtr, NULL);
@@ -206,10 +226,10 @@ int appMain()
         WA_MinHeight,             180,
         WA_MaxWidth,              -1,
         WA_MaxHeight,             -1,
-        WA_Width,                 ScreenPtr->Width*9/10,
-        WA_Height,                200,
-        WA_Left,                  ScreenPtr->Width/20,
-        WA_Top,                   (ScreenPtr->Height-200)/2,
+        WA_Width,                 appWidth,
+        WA_Height,                appHeight,
+        WA_Left,                  appLeft,
+        WA_Top,                   appTop,
         WA_SizeBRight,            TRUE,
         WA_SizeBBottom,           TRUE,
         WA_NewLookMenus,          TRUE,
@@ -221,7 +241,7 @@ int appMain()
 		*/
         WINDOW_AppPort,           AppPort,
 		
-		WINDOW_Position,          WPOS_CENTERSCREEN,
+		//WINDOW_Position,          WPOS_CENTERSCREEN,
         WINDOW_ParentGroup,       vParent = VGroupObject,
 												LAYOUT_SpaceOuter, TRUE,
 												LAYOUT_BevelStyle, BVS_GROUP,
@@ -393,11 +413,20 @@ int appMain()
 			}   
 		}   
 	}
-
+	
+	appTop = WindowPtr->TopEdge;
+	appLeft = WindowPtr->LeftEdge;
+	appWidth = WindowPtr->Width;
+	appHeight = WindowPtr->Height;
+	
+	SavePrefs();
 	freeList(&adfList);
     ClearMenuStrip(WindowPtr);
 	FreeVisualInfo(VisualInfoPtr);
 	
+	// delete log file
+	Execute("Delete RAM:dacgui.log >NIL:", NULL, NULL); 
+
 	return 0;
 }
 
@@ -553,7 +582,7 @@ void About(void)
         sizeof(struct EasyStruct),
         0,
         "About",
-        "DAControlGUI 1.0.0411 (C) 2021\nCoded by emarti, Murat OZDEMIR\n\nWebSite:\nhttps://github.com/emartisoft/DAControlGUI",
+        "DAControlGUI 1.0.1106 (C) 2021\nCoded by emarti, Murat OZDEMIR\n\nWebSite:\nhttps://github.com/emartisoft/DAControlGUI",
         "Ok"
     };
     EasyRequest(WindowPtr, &aboutReq, NULL, NULL);
@@ -815,6 +844,7 @@ void loadChangeAdfWin(void)
 													  GA_RelVerify, TRUE,
 													  GETFILE_TitleText, "Load ADF File ...",
 													  GETFILE_Pattern, "#?.adf",
+													  GETFILE_FullFile, loadChangeFileReqPath, 
 													  GETFILE_DoPatterns, TRUE,
 													  GETFILE_RejectIcons, TRUE,
 												 End,
@@ -869,6 +899,11 @@ void loadChangeAdfWin(void)
 							GetAttr(INTEGER_Number, o[3], &deviceNo); 
 							GetAttr(GA_Selected, o[4], &writeProtected);
 							GetAttr(GETFILE_FullFile, o[2], (ULONG*)&gFullFilename);
+							GetAttr(GETFILE_Drawer, o[2], (ULONG*)&loadChangeFileReqPath);
+							
+							if(!isContainsAdfExt(gFullFilename)) break;
+
+							sprintf(loadChangeFileReqPath, "%s", gFullFilename);
 
 							sprintf(currentDeviceStr, "DA%d", deviceNo);
 							for(m=0; m<count;m++)
@@ -1055,7 +1090,7 @@ void createAdfWin(void)
 													  GETFILE_Pattern, "#?.adf",
 													  GETFILE_DoPatterns, TRUE,
 													  GETFILE_RejectIcons, TRUE,
-													  GETFILE_FullFile, "RAM:Empty.adf",
+													  GETFILE_FullFile, createFileReqPath,
 												 End,
 												 
 												 CHILD_Label, LabelObject,
@@ -1110,7 +1145,10 @@ void createAdfWin(void)
 							GetAttr(GETFILE_FullFile, co[2], (ULONG*)&cgFullFilename);
 							GetAttr(STRINGA_TextVal, co[6], (ULONG*)&labelstr);
 							GetAttr(CHOOSER_Selected, co[5], (ULONG*)&idx);
+
+							if(!isContainsAdfExt(cgFullFilename)) break;
 								
+							sprintf(createFileReqPath, "%s", cgFullFilename);
 							// creating adf...
 							sprintf(cmd, "CREATE LABEL=\"%s\" DISKTYPE ""%s"" DEVICE DA%d: \"%s\" QUIET >NIL:", labelstr, disktype[idx], cdeviceNo, cgFullFilename);
 							RunDAControl(cmd);
@@ -1170,4 +1208,57 @@ void buttonsDisable(BOOL b)
 	setDisable(bEjectAll, b);
 	setDisable(bRefresh, b);
 	if(b) ClearMenuStrip(WindowPtr); else SetMenuStrip(WindowPtr, dacMenu);
+}
+
+/*
+### SYS:Prefs/Env-Archive/DAControlGUI.prefs ###
+LeftEdge
+TopEdge
+Width
+Height
+Load/Change File Req. full filename
+Create File Req. full filename
+*/
+BPTR fp;
+char fpStr[BUFFERSIZE];
+
+void LoadPrefs(void)
+{
+	fp = Open(PREFFILEPATH, MODE_OLDFILE);
+	if (fp)
+	{
+		UBYTE buffer[BUFFERSIZE];
+        FGets(fp, buffer, BUFFERSIZE);
+		appLeft = atoi(buffer);
+		FGets(fp, buffer, BUFFERSIZE);
+		appTop = atoi(buffer);
+		FGets(fp, buffer, BUFFERSIZE);
+		appWidth = atoi(buffer);
+		FGets(fp, buffer, BUFFERSIZE);
+		appHeight = atoi(buffer);
+		FGets(fp, buffer, BUFFERSIZE);
+		sprintf(loadChangeFileReqPath, "%s", buffer);
+		loadChangeFileReqPath[strlen(loadChangeFileReqPath)-1] = '\0';
+		FGets(fp, buffer, BUFFERSIZE);
+		sprintf(createFileReqPath, "%s", buffer);
+		createFileReqPath[strlen(createFileReqPath)-1] = '\0';
+		
+		Close(fp);
+	}
+}
+
+void SavePrefs(void)
+{
+	fp = Open(PREFFILEPATH, MODE_NEWFILE);
+	if (fp)
+	{
+		sprintf(fpStr, "%d\n%d\n%d\n%d\n%s\n%s\n", appLeft, appTop, appWidth, appHeight, loadChangeFileReqPath, createFileReqPath);
+		FPuts(fp, fpStr);
+		Close(fp);
+	}
+}
+
+void Prefs(void)
+{
+	SavePrefs();
 }
