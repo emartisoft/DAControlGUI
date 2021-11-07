@@ -94,7 +94,6 @@ void buttonsDisable(BOOL b);
 #define PREFFILEPATH	"SYS:Prefs/Env-Archive/DAControlGUI.prefs"
 void SavePrefs(void);
 void LoadPrefs(void);
-void Prefs(void);
 char loadChangeFileReqPath[BUFFERSIZE];
 char createFileReqPath[BUFFERSIZE];
 UWORD appLeft, appTop, appWidth, appHeight;
@@ -1258,7 +1257,3 @@ void SavePrefs(void)
 	}
 }
 
-void Prefs(void)
-{
-	SavePrefs();
-}
