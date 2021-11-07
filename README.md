@@ -1,5 +1,5 @@
 # DAControlGUI
-GUI for DAControl on Amiga OS 3.X
+GUI for DAControl on Amiga OS 3.2
 
 As you know DAControl & trackfile.device provide unprecedented functionality, 
 as they enable users to create, mount, insert and eject ADF files. 
