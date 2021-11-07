@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <exec/types.h>
 #include <proto/dos.h>
 
@@ -13,5 +14,6 @@ extern BOOL fileExist(STRPTR filePath);
 extern void RunDAControl(char parameter[BUFFERSIZE]);
 extern char* fulltrim(char* str);
 extern char* substring(char*, int , int);
+extern BOOL isContainsAdfExt(STRPTR filePath);
 
 #endif

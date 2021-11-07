@@ -78,3 +78,18 @@ char* fulltrim(char* str)
     str[index + 1] = '\0';
     return str;
 }
+
+extern BOOL isContainsAdfExt(STRPTR filePath)
+{
+    int i;
+    char * isPointAdfStr;
+    char fPath[BUFFERSIZE];
+    const char padf[5] = ".adf";
+    
+    sprintf(fPath, "%s", filePath);
+    i=0;
+    while(fPath[i]) { fPath[i] = tolower(fPath[i]); i++; }
+
+    isPointAdfStr = strstr(fPath, padf);
+    if(isPointAdfStr) return 1; else return 0;
+}
