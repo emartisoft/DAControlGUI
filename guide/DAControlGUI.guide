@@ -48,8 +48,16 @@
 
 	@{b}Version History@{ub}
 
+	1.0.1106 :
+		When the application is quited then delete log file from RAM: drawer [Thanks to Alexander]
+		It Remembers these: [Thanks to Jonas Thorell]
+			a. Width & Height of the main window
+			b. Position of the main window 
+			c. Last opened drawer and filename for file requester 
+		Minor bugs fixed
+
 	1.0.0411 : 
-		Fixed a bug in the file selector. [Thanks to Alexander]
+		Fixed a bug in the file selector [Thanks to Alexander]
 		Added 'Refresh' menu
 	
 	1.0 : First release (29.10.2021)
