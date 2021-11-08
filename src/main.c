@@ -229,7 +229,7 @@ int appMain()
         WA_Height,                appHeight,
         WA_Left,                  appLeft,
         WA_Top,                   appTop,
-        WA_SizeBRight,            TRUE,
+        WA_SizeBRight,            FALSE,
         WA_SizeBBottom,           TRUE,
         WA_NewLookMenus,          TRUE,
 		WINDOW_IconTitle,         "DAControlGUI",
