@@ -572,7 +572,7 @@ void About(void)
         sizeof(struct EasyStruct),
         0,
         "About",
-        "DAControlGUI 1.0.1106 (C) 2021\nCoded by emarti, Murat OZDEMIR\n\nWebSite:\nhttps://github.com/emartisoft/DAControlGUI",
+        "DAControlGUI 1.0.1110 (C) 2021\nCoded by emarti, Murat OZDEMIR\n\nWebSite:\nhttps://github.com/emartisoft/DAControlGUI",
         "Ok"
     };
     EasyRequest(WindowPtr, &aboutReq, NULL, NULL);
