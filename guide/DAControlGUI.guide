@@ -48,6 +48,10 @@
 
 	@{b}Version History@{ub}
 
+        1.0.1110 :
+                Disabled size right border of main window
+                Added iconify menu item
+                
 	1.0.1106 :
 		When the application is quited then delete log file from RAM: drawer [Thanks to Alexander]
 		It Remembers these: [Thanks to Jonas Thorell]
@@ -60,7 +64,8 @@
 		Fixed a bug in the file selector [Thanks to Alexander]
 		Added 'Refresh' menu
 	
-	1.0 : First release (29.10.2021)
+	1.0 : 
+        	First release (29.10.2021)
 	
 @endnode
 @REMARK *--------------------------------------------------------------------*	
