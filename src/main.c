@@ -6,9 +6,13 @@ delete /bin/#?.lnk
 sc #?.c link LIB functions.lib LIB:sc.lib LIB:amiga.lib LIB:reaction.lib TO /bin/DAControlGUI
 delete #?.o
 delete /bin/#?.lnk
+; copy files to bin drawer
 copy /guide/DAControlGUI.guide /bin
 copy /guide/DAControlGUI.guide.info /bin
 copy /info/DAControlGUI.info /bin
+; copy bin drawer to da64 floppy driver (adf)
+DAControl load device da64: writeprotected=no /adf/DAControlGUI.adf
+copy /bin/#? da64:
 quit
 */
 
@@ -72,6 +76,7 @@ struct Menu*          dacMenu           = NULL;
 
 signed char done;
 APTR winVisualInfo;
+ULONG signal;
 
 // prototypes
 void ProcessMenuIDCMPdacMenu(UWORD MenuNumber);
@@ -90,6 +95,7 @@ void createAdfWin(void);
 void setDisable(struct Gadget* gad, BOOL value);
 void createADFList(void);
 void buttonsDisable(BOOL b);
+void iconify(void);
 
 #define PREFFILEPATH	"SYS:Prefs/Env-Archive/DAControlGUI.prefs"
 void SavePrefs(void);
@@ -185,7 +191,6 @@ int appMain()
 {
 	ULONG result;
 	UWORD code;
-	ULONG signal;
 
 	ScreenPtr = LockPubScreen(NULL);
     VisualInfoPtr = GetVisualInfo(ScreenPtr, NULL);
@@ -370,24 +375,7 @@ int appMain()
                 break;
                 
                 case WMHI_ICONIFY: /* iconify / uniconify */
-					AppPort = CreateMsgPort();
-					appicon=AddAppIconA(0L,0L,"DAControlGUI",AppPort,NULL,dobj,NULL);
-					RA_CloseWindow(WindowObjectPtr);
-					WindowPtr = NULL;
-					WaitPort(AppPort);
-					RemoveAppIcon(appicon);
-                    WindowPtr = (struct Window *) RA_OpenWindow(WindowObjectPtr);
-
-                    if (WindowPtr)
-                    {
-                        SetMenuStrip(WindowPtr, dacMenu);
-                        GetAttr(WINDOW_SigMask, WindowObjectPtr, &signal);
-                    }   
-					else
-                    {
-                        done = TRUE;
-                    }
-					
+					iconify();		
                 break;
 				
 				case WMHI_MENUPICK:
@@ -523,6 +511,9 @@ void ProcessMenuIDCMPdacMenu(UWORD MenuNumber)
 
 					case DAControlGUIMenuAbout :
 						About();
+						break;
+					case DAControlGUIMenuIconify :
+						iconify();
 						break;
 					case DAControlGUIMenuQuit :
                         done=TRUE;
@@ -1257,3 +1248,23 @@ void SavePrefs(void)
 	}
 }
 
+void iconify(void)
+{
+	AppPort = CreateMsgPort();
+	appicon=AddAppIconA(0L,0L,"DAControlGUI",AppPort,NULL,dobj,NULL);
+	RA_CloseWindow(WindowObjectPtr);
+	WindowPtr = NULL;
+	WaitPort(AppPort);
+	RemoveAppIcon(appicon);
+	WindowPtr = (struct Window *) RA_OpenWindow(WindowObjectPtr);
+
+	if (WindowPtr)
+	{
+		SetMenuStrip(WindowPtr, dacMenu);
+		GetAttr(WINDOW_SigMask, WindowObjectPtr, &signal);
+	}   
+	else
+	{
+		done = TRUE;
+	}
+}

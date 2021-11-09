@@ -4,8 +4,10 @@
 //-------------------------------
 #define DAControlGUIMenu 0
 #define DAControlGUIMenuAbout 0
-#define DAControlGUIMenuBar 1
-#define DAControlGUIMenuQuit 2
+#define DAControlGUIMenuBar1 1
+#define DAControlGUIMenuIconify 2
+#define DAControlGUIMenuBar2 3
+#define DAControlGUIMenuQuit 4
 //-------------------------------
 #define Controls 1
 #define ControlsLoadChange 0
@@ -23,6 +25,8 @@ struct NewMenu dacMenuNewMenu[] =
 {
     NM_TITLE, (STRPTR)"DAControlGUI"               	,  NULL , 0, NULL, (APTR)~0,
     NM_ITEM , (STRPTR)"About"               		,  NULL , 0, 0L, (APTR)~0,
+    NM_ITEM , NM_BARLABEL                          	,  NULL , 0, 0L, (APTR)~0,
+    NM_ITEM , (STRPTR)"Iconify"                     ,  "I" , 0, 0L, (APTR)~0,
     NM_ITEM , NM_BARLABEL                          	,  NULL , 0, 0L, (APTR)~0,
     NM_ITEM , (STRPTR)"Quit"                      	,  "Q" , 0, 0L, (APTR)~0,
 	
