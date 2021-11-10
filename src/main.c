@@ -11,6 +11,7 @@ copy /guide/DAControlGUI.guide /bin
 copy /guide/DAControlGUI.guide.info /bin
 copy /info/DAControlGUI.info /bin
 ; copy bin drawer to da64 floppy driver (adf)
+DAControl eject device da64: safeeject=yes timeout 15 quiet
 DAControl load device da64: writeprotected=no /adf/DAControlGUI.adf
 copy /bin/#? da64:
 quit
@@ -42,7 +43,6 @@ NOSTanDardIO
 #include "includes.h"
 #include "menu.h"
 #include "version.h"
-//#include "functions.h"
 
 BASEDEF(Icon);
 BASEDEF(Workbench);
@@ -140,6 +140,7 @@ char manualPath[PATH_MAX+NAME_MAX];
 struct MsgPort*     AppPort = NULL;
 struct DiskObject*  dobj    = NULL;
 struct AppIcon*     appicon = NULL;
+struct AppMenuItem* appmenuitem = NULL;
 //struct Hook HookStruct;
 
 int selectedDeviceNo;
@@ -572,8 +573,8 @@ void About(void)
         sizeof(struct EasyStruct),
         0,
         "About",
-        "DAControlGUI 1.0.1110 (C) 2021\nCoded by emarti, Murat OZDEMIR\n\nWebSite:\nhttps://github.com/emartisoft/DAControlGUI",
-        "Ok"
+        ABOUT,
+		"Ok"
     };
     EasyRequest(WindowPtr, &aboutReq, NULL, NULL);
 }
@@ -585,7 +586,7 @@ void AppTerminate(void)
         sizeof(struct EasyStruct),
         0,
         "Error - DAControlGUI",
-        "SYS:C/DAControl not found.\nThe application will be terminated.\n",
+        "SYS:C/DAControl not found.\nSYS:Devs/trackfile.device not found.\nDo you have OS 3.2?\nThe application will be terminated.\n",
         "Ok"
     };
     EasyRequest(WindowPtr, &appTerReq, NULL, NULL);
@@ -806,9 +807,9 @@ void loadChangeAdfWin(void)
 																				   GA_ID, IDINTEGER,
 																				   GA_RelVerify, TRUE,
 																				   INTEGER_Number, selectedDeviceNo,
-																				   INTEGER_MaxChars, 5,
+																				   INTEGER_MaxChars, 4,
 																				   INTEGER_Minimum, 0,
-																				   INTEGER_Maximum, 1024,
+																				   INTEGER_Maximum, 9999,
 																				   INTEGER_Arrows, TRUE,
 																				   STRINGA_Justification, GACT_STRINGRIGHT,
 																  End,
@@ -1037,9 +1038,9 @@ void createAdfWin(void)
 																				   GA_ID, IDINTEGER,
 																				   GA_RelVerify, TRUE,
 																				   INTEGER_Number, selectedDeviceNo,
-																				   INTEGER_MaxChars, 15,
+																				   INTEGER_MaxChars, 4,
 																				   INTEGER_Minimum, 0,
-																				   INTEGER_Maximum, 1024,
+																				   INTEGER_Maximum, 9999,
 																				   INTEGER_Arrows, TRUE,
 																				   STRINGA_Justification, GACT_STRINGRIGHT,
 																  End,
@@ -1251,11 +1252,13 @@ void SavePrefs(void)
 void iconify(void)
 {
 	AppPort = CreateMsgPort();
-	appicon=AddAppIconA(0L,0L,"DAControlGUI",AppPort,NULL,dobj,NULL);
+	appicon=AddAppIconA(0L, 0L, "DAControlGUI", AppPort, NULL, dobj, NULL);
+	appmenuitem=AddAppMenuItemA(0L, 0L, "DAControlGUI", AppPort, NULL);
 	RA_CloseWindow(WindowObjectPtr);
 	WindowPtr = NULL;
 	WaitPort(AppPort);
 	RemoveAppIcon(appicon);
+	RemoveAppMenuItem(appmenuitem);
 	WindowPtr = (struct Window *) RA_OpenWindow(WindowObjectPtr);
 
 	if (WindowPtr)
