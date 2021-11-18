@@ -11,7 +11,7 @@
 #define BUFFERSIZE  	0X200
 
 extern BOOL fileExist(STRPTR filePath);
-extern void RunDAControl(char parameter[BUFFERSIZE]);
+extern void RunDAControl(char *parameter);
 extern char* fulltrim(char* str);
 extern char* substring(char*, int , int);
 extern BOOL isContainsAdfExt(STRPTR filePath);

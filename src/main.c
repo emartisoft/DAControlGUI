@@ -672,7 +672,7 @@ void createADFList(void)
 	
     if(fp)
     {
-        UBYTE buffer[BUFFERSIZE];
+        char *buffer = AllocVec(BUFFERSIZE, MEMF_CLEAR);
         while(FGets(fp, buffer, BUFFERSIZE))
         {
             if((count>0)&&(strlen(buffer)>0))
@@ -682,7 +682,7 @@ void createADFList(void)
                 col2[count-1]= fulltrim(substring(buffer, 18, 32)); // volume name
                 col4[count-1]= fulltrim(substring(buffer, 79, 11)); // access
                 col5[count-1]= fulltrim(substring(buffer, 91, strlen(buffer)-90)); // file
-                free(buffer);
+                FreeVec(buffer);
             }
             count++;
         }
