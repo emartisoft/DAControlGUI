@@ -23,14 +23,14 @@
 
 struct NewMenu dacMenuNewMenu[] =
 {
-    NM_TITLE, (STRPTR)"DAControlGUI"               	,  NULL , 0, NULL, (APTR)~0,
+    NM_TITLE, (STRPTR)"DAControlGUI"               	,  NULL , 0, 0L, (APTR)~0,
     NM_ITEM , (STRPTR)"About"               		,  NULL , 0, 0L, (APTR)~0,
     NM_ITEM , NM_BARLABEL                          	,  NULL , 0, 0L, (APTR)~0,
     NM_ITEM , (STRPTR)"Iconify"                     ,  "I" , 0, 0L, (APTR)~0,
     NM_ITEM , NM_BARLABEL                          	,  NULL , 0, 0L, (APTR)~0,
     NM_ITEM , (STRPTR)"Quit"                      	,  "Q" , 0, 0L, (APTR)~0,
 	
-    NM_TITLE, (STRPTR)"Controls"              		,  NULL , 0, NULL, (APTR)~0,
+    NM_TITLE, (STRPTR)"Controls"              		,  NULL , 0, 0L, (APTR)~0,
     NM_ITEM , (STRPTR)"Load / Change ADF" 			,  "L" , 0, 0L, (APTR)~0,
     NM_ITEM , (STRPTR)"Create ADF"                  ,  "C" , 0, 0L, (APTR)~0,
 	NM_ITEM , NM_BARLABEL                          	,  NULL , 0, 0L, (APTR)~0,
@@ -39,7 +39,7 @@ struct NewMenu dacMenuNewMenu[] =
 	NM_ITEM , NM_BARLABEL                          	,  NULL , 0, 0L, (APTR)~0,
 	NM_ITEM , (STRPTR)"Refresh"                 	,  "R" , 0, 0L, (APTR)~0,
     
-    NM_TITLE, (STRPTR)"Help"                       ,  NULL , 0, NULL, (APTR)~0,
+    NM_TITLE, (STRPTR)"Help"                       ,  NULL , 0, 0L, (APTR)~0,
     NM_ITEM , (STRPTR)"Manual"                      ,  "M" , 0, 0L, (APTR)~0,
 	
     NM_END  , NULL                                 ,  NULL , 0, 0L, (APTR)~0

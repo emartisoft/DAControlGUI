@@ -1,0 +1,14 @@
+CC := vc +aos68k
+CFLAGS :=
+AR := join
+
+OBJS := functions.o
+DEPS := functions.h
+
+all: functions.lib
+
+%.o: %.c $(DEPS)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+functions.lib: $(OBJS)
+	$(AR) $^ AS $@

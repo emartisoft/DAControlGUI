@@ -26,7 +26,7 @@ void RunDAControl(char parameter[BUFFERSIZE])
     char dacontrolPATH[BUFFERSIZE];
     strcpy(dacontrolPATH, "SYS:C/DAControl ");
     strcat(dacontrolPATH, parameter);
-    Execute(dacontrolPATH, NULL, NULL); 
+    Execute(dacontrolPATH, 0, 0); 
 }
 
 /*===============================

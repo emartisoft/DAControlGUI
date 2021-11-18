@@ -42,8 +42,12 @@ NOSTanDardIO
 
 #include "includes.h"
 #include "menu.h"
+#include "functions.h"
 #include "version.h"
 
+BASEDEF(Intuition);
+BASEDEF(Utility);
+BASEDEF(GadTools);
 BASEDEF(Icon);
 BASEDEF(Workbench);
 BASEDEF(Window);
@@ -174,6 +178,9 @@ int main(void)
 	OPENLIB(Dos,        "dos.library");
 	OPENLIB(Icon,       "icon.library");
 	OPENLIB(Workbench,  "workbench.library");
+	OPENLIB(GadTools,   "gadtools.library");
+	OPENLIB(Intuition,  "intuition.library");
+	OPENLIB(Utility,    "utility.library");
 
 	ret = appMain();
 	
@@ -194,7 +201,7 @@ int appMain()
 	UWORD code;
 
 	ScreenPtr = LockPubScreen(NULL);
-    VisualInfoPtr = GetVisualInfo(ScreenPtr, NULL);
+    VisualInfoPtr = GetVisualInfoA(ScreenPtr, NULL);
 	//InitHook(&HookStruct, HookFunc, NULL);
 	
 	
@@ -211,7 +218,7 @@ int appMain()
 	dobj=GetDiskObject(appPath);
     if(dobj!=0)
 	{
-		dobj->do_Type=NULL;
+		dobj->do_Type=0;
 	}
 
     if (!(WindowObjectPtr = NewObject
@@ -316,7 +323,7 @@ int appMain()
         done=TRUE;
     }
 	
-    UnlockPubScreen(ScreenPtr);
+    UnlockPubScreen(NULL, ScreenPtr);
     ScreenPtr = NULL;
 
     if (!(WindowPtr = (struct Window *) DoMethod(WindowObjectPtr, WM_OPEN, NULL)))
@@ -413,7 +420,7 @@ int appMain()
 	FreeVisualInfo(VisualInfoPtr);
 	
 	// delete log file
-	Execute("Delete RAM:dacgui.log >NIL:", NULL, NULL); 
+	Execute("Delete RAM:dacgui.log >NIL:", 0, 0); 
 
 	return 0;
 }
@@ -467,7 +474,7 @@ void CloseLibs(void)
 {
   	if (ScreenPtr)
     {   
-		UnlockPubScreen(NULL);
+		UnlockPubScreen(NULL, ScreenPtr);
         ScreenPtr = NULL;
     }
 	
@@ -481,6 +488,9 @@ void CloseLibs(void)
 	
 	if (AppPort) DeleteMsgPort(AppPort);
 	
+	CLOSELIB(Intuition);
+	CLOSELIB(Utility);
+	CLOSELIB(GadTools);
 	CLOSELIB(Workbench);
 	CLOSELIB(Icon);
     CLOSELIB(Layout);
@@ -553,7 +563,7 @@ void ProcessMenuIDCMPdacMenu(UWORD MenuNumber)
 						break;
 
 					case HelpMenuManual :
-						Execute(manualPath, NULL, NULL); 
+						Execute(manualPath, 0, 0); 
 						break;
 				}
 				break;
