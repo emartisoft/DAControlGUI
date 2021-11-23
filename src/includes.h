@@ -32,6 +32,7 @@
 #include <proto/string.h>
 #include <gadgets/string.h>
 
+#include <workbench/startup.h>
 #include <workbench/workbench.h>
 #include <proto/dos.h>
 
