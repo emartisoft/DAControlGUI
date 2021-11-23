@@ -198,15 +198,17 @@ void ejectADFMenu(struct AppMessage *EjectADFMsg)
 	createADFList();
 
 	for(i = 0; i < EjectADFMsg->am_NumArgs; i++) {
-		NameFromLock(EjectADFMsg->am_ArgList[i].wa_Lock, &VolName, 104);
-		VolName[strlen(VolName)-1] = 0;
-		for(j = 0; j < MAX_LISTED_ADF; j++) {
-			if(strcmp(col2[j], VolName) == 0) {
-				index = j;
-				break;
+		if(EjectADFMsg->am_ArgList[i].wa_Name[0] = 0) {
+			NameFromLock(EjectADFMsg->am_ArgList[i].wa_Lock, &VolName, 104);
+			VolName[strlen(VolName)-1] = 0;
+			for(j = 0; j < MAX_LISTED_ADF; j++) {
+				if(strcmp(col2[j], VolName) == 0) {
+					index = j;
+					break;
+				}
 			}
+			if(index>=0) Eject(col1[index]);
 		}
-		if(index>=0) Eject(col1[index]);
 	}
 
 	createADFList();
