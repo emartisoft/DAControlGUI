@@ -102,6 +102,7 @@ void createADFList(void);
 void buttonsDisable(BOOL b);
 void iconify(BOOL addIcon);
 void uniconify(void);
+void getTooltypes(UBYTE **tooltypes);
 
 #define PREFFILEPATH	"SYS:Prefs/Env-Archive/DAControlGUI.prefs"
 void SavePrefs(void);
@@ -148,6 +149,9 @@ char appPath[PATH_MAX+NAME_MAX];
 char curPath[PATH_MAX];
 char manualPath[PATH_MAX+NAME_MAX];
 
+BOOL CXpopup = TRUE;
+LONG CXpri = 0;
+
 struct MsgPort*     AppMenuMP = NULL;
 struct MsgPort*     AppPort = NULL;
 struct DiskObject*  dobj    = NULL;
@@ -157,10 +161,13 @@ struct AppMenuItem* appmenuitem = NULL;
 
 int selectedDeviceNo;
 
-int main(void)
+int main(int argc, char **argv)
 {
 	int ret = 0;
-	
+	UBYTE **tooltypes;
+	char i;
+	int olddir;
+
 	if(!fileExist("SYS:C/DAControl"))  // do you have os 3.2?
     {
        AppTerminate();
@@ -191,11 +198,29 @@ int main(void)
 	OPENLIB(Utility,    "utility.library");
 	OPENLIB(Cx,         "commodities.library");
 
+	tooltypes = ArgArrayInit(argc, argv);
+	getTooltypes(tooltypes);
+	ArgArrayDone();
+
 	ret = appMain();
 	
 	CloseLibs();
 	return ret;
 }
+
+void getTooltypes(UBYTE **tooltypes)
+{
+	char *s;
+	
+	s = ArgString(tooltypes, "CX_POPUP", "YES");
+
+	if(MatchToolValue(s, "NO")) {
+		CXpopup = FALSE;
+	}
+
+	CXpri = ArgInt(tooltypes, "CX_PRIORITY", 0);
+}
+
 
 int makeMenu(APTR MenuVisualInfo)
 {
@@ -268,7 +293,7 @@ unregisterCommodity(CxObj *CXBroker, struct MsgPort *CXMP)
 	DeletePort(CXMP);
 }
 
-struct MsgPort *registerCommodity(LONG CXPri, CxObj **CXBroker)
+struct MsgPort *registerCommodity(CxObj **CXBroker)
 {
 	struct MsgPort *CXMP = NULL;
 	struct NewBroker newbroker;
@@ -281,13 +306,16 @@ struct MsgPort *registerCommodity(LONG CXPri, CxObj **CXBroker)
 		newbroker.nb_Descr = "GUI for DAControl on AmigaOS 3.2";
 		newbroker.nb_Unique = NBU_UNIQUE | NBU_NOTIFY;
 		newbroker.nb_Flags = COF_SHOW_HIDE;
-		newbroker.nb_Pri = CXPri;
+		newbroker.nb_Pri = CXpri;
 		newbroker.nb_Port = CXMP;
 		newbroker.nb_ReservedChannel = 0;
 
 		if(broker = CxBroker(&newbroker, NULL)) {
 			ActivateCxObj(broker, 1L);
 			*CXBroker = broker;
+		} else {
+			DeleteMsgPort(CXMP);
+			return NULL;
 		}
 	}
 
@@ -433,23 +461,29 @@ int appMain()
 	
     UnlockPubScreen(NULL, ScreenPtr);
     ScreenPtr = NULL;
+    makeMenu(VisualInfoPtr);
+	
+	CXMP = registerCommodity(&CXBroker);
+	if(CXMP) {
+		CXSignal = (1 << CXMP->mp_SigBit);
+	} else {
+		CXpopup = FALSE;
+		done = TRUE;
+	}
 
-    if (!(WindowPtr = (struct Window *) DoMethod(WindowObjectPtr, WM_OPEN, NULL)))
-    {   
-        done=TRUE;
+    if(CXpopup) {
+	if (!(WindowPtr = (struct Window *) DoMethod(WindowObjectPtr, WM_OPEN, NULL)))
+        {
+            done=TRUE;
+        }
+	GetAttr(WINDOW_SigMask, WindowObjectPtr, &signal);
+	SetMenuStrip(WindowPtr, dacMenu);
     }
 
-	
-    makeMenu(VisualInfoPtr);
-    SetMenuStrip(WindowPtr, dacMenu);
+
 	createADFList();
 	EjectADFItem = addEjectADFMenu();
 	AppMenuSignal = (1 << AppMenuMP->mp_SigBit);
-
-	CXMP = registerCommodity(0, &CXBroker);
-	CXSignal = (1 << CXMP->mp_SigBit);
-
-	GetAttr(WINDOW_SigMask, WindowObjectPtr, &signal);
 
     while(!done)
     {   
@@ -458,8 +492,8 @@ int appMain()
 		if(wait & CXSignal) {
 			while(CXmsg = (CxMsg *)GetMsg(CXMP)) {
 				CXmsgid = CxMsgID(CXmsg);
-    	        CXmsgtype = CxMsgType(CXmsg);
-        	    ReplyMsg((struct Message *)CXmsg);
+				CXmsgtype = CxMsgType(CXmsg);
+				ReplyMsg((struct Message *)CXmsg);
 
 				switch(CXmsgtype) {
 					case CXM_COMMAND:
@@ -468,11 +502,19 @@ int appMain()
 								done = TRUE;
 							break;
 							case CXCMD_APPEAR:
+							case CXCMD_UNIQUE:
 								uniconify();
 							break;
 							case CXCMD_DISAPPEAR:
 								iconify(FALSE);
 							break;
+							
+							/* Nothing to disable yet, here for later use */
+							case CXCMD_ENABLE:
+							case CXCMD_DISABLE:
+							default:
+							break;
+
 						}
 					break;
 					case CXM_IEVENT:
