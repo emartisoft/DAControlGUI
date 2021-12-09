@@ -33,10 +33,11 @@
 	@{b}Features@{ub}
 	1. Loads a specific ADF file and mounts it. (To mount ADF image by double-clicking on it) 
 	2. Removes an ADF file from a unit and then loads a new ADF file.
-	3. Ejects an / Eject All ADF file. (*)
+	3. Ejects an / Eject All ADF file (also from Tools menu). (*)
 	4. Displays list of mounted devices.
 	5. Creates ADF image.
 	6. Iconify / Uniconify on workbench.
+	7. Runs as a commodity.
 
 	(*) That's why this app was created. :)
 
