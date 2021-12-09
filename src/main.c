@@ -195,10 +195,70 @@ int makeMenu(APTR MenuVisualInfo)
     return( 0L );
 }
 
+void ejectADFMenu(struct AppMessage *EjectADFMsg)
+{
+	ULONG i = 0, j = 0;
+	char VolName[104];
+	int index = -1;
+
+	/* Make sure our list is up-to-date before searching it */
+	createADFList();
+
+	for(i = 0; i < EjectADFMsg->am_NumArgs; i++) {
+		if(EjectADFMsg->am_ArgList[i].wa_Name[0] = 0) {
+			NameFromLock(EjectADFMsg->am_ArgList[i].wa_Lock, &VolName, 104);
+			VolName[strlen(VolName)-1] = 0;
+			for(j = 0; j < MAX_LISTED_ADF; j++) {
+				if(strcmp(col2[j], VolName) == 0) {
+					index = j;
+					break;
+				}
+			}
+			if(index>=0) Eject(col1[index]);
+		}
+	}
+
+	createADFList();
+}
+
+void removeEjectADFMenu(struct AppMenuItem *ejectADFItem, struct MsgPort *EjectADFMP)
+{
+	struct AppMessage *appmsg = NULL;
+
+	RemoveAppMenuItem(ejectADFItem);
+
+	while(appmsg = (struct AppMessage *)GetMsg(EjectADFMP)) {
+		ReplyMsg((struct Message *)appmsg);
+	}
+	DeleteMsgPort(EjectADFMP);
+}
+
+struct MsgPort *addEjectADFMenu(struct AppMenuItem **ejectADFItem)
+{
+	struct MsgPort *EjectADFMP = NULL;
+	struct AppMenuItem *appmenuitem = NULL;
+
+	if(EjectADFMP = CreateMsgPort()) {
+		appmenuitem = AddAppMenuItemA(0L, 0, "Eject ADF", EjectADFMP, NULL);
+		if(appmenuitem == NULL) {
+			DeleteMsgPort(EjectADFMP);
+			EjectADFMP = NULL;
+		}
+	}
+
+	*ejectADFItem = appmenuitem;
+	return EjectADFMP;
+}
+
 int appMain()
 {
 	ULONG result;
 	UWORD code;
+	ULONG wait = 0;
+	struct MsgPort *EjectADFMP = NULL;
+	struct AppMenuItem *EjectADFItem = NULL;
+	ULONG EjectADFSignal = 0;
+	struct AppMessage *EjectADFMsg;
 
 	ScreenPtr = LockPubScreen(NULL);
     VisualInfoPtr = GetVisualInfoA(ScreenPtr, NULL);
@@ -335,80 +395,89 @@ int appMain()
     makeMenu(VisualInfoPtr);
     SetMenuStrip(WindowPtr, dacMenu);
 	createADFList();
-	
+	EjectADFMP = addEjectADFMenu(&EjectADFItem);
+	EjectADFSignal = (1 << EjectADFMP->mp_SigBit);
+
 	GetAttr(WINDOW_SigMask, WindowObjectPtr, &signal);
 
     while(!done)
     {   
-		Wait(signal | (1 << WindowPtr->UserPort->mp_SigBit));
+		wait = Wait(signal | (1 << WindowPtr->UserPort->mp_SigBit) | EjectADFSignal);
 
-        while ((result = DoMethod(WindowObjectPtr, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG)
-        {   switch (result & WMHI_CLASSMASK)
-            {
-                case WMHI_CLOSEWINDOW:
-                    done = TRUE;
-                break;
+		if(wait & EjectADFSignal) {
+			while(EjectADFMsg = (struct AppMessage *)GetMsg(EjectADFMP)) {
+				ejectADFMenu(EjectADFMsg);
+				ReplyMsg((struct Message *)EjectADFMsg);
+			}
+		} else {
+	        while ((result = DoMethod(WindowObjectPtr, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG)
+    	    {   switch (result & WMHI_CLASSMASK)
+        	    {
+            	    case WMHI_CLOSEWINDOW:
+                	    done = TRUE;
+	                break;
 
-                case WMHI_GADGETUP:
-                    switch(result & WMHI_GADGETMASK)
-                    {
+	                case WMHI_GADGETUP:
+    	                switch(result & WMHI_GADGETMASK)
+        	            {
                         
-                        case IDLOADCHANGE:
-                            loadChangeAdfWin();
-                        break;
+            	            case IDLOADCHANGE:
+                	            loadChangeAdfWin();
+                    	    break;
 
-                        case IDCREATE:
-                            createAdfWin();
-                        break;
+	                        case IDCREATE:
+    	                        createAdfWin();
+        	                break;
 
-                        case IDEJECT:
-                            clickEject();
-                        break;
+	                        case IDEJECT:
+    	                        clickEject();
+        	                break;
 						
-						case IDEJECTALL:
-							clickEjectAll();
-                        break;
+							case IDEJECTALL:
+								clickEjectAll();
+        	                break;
 
-						case IDREFRESH:
-							createADFList();
-						break;
+							case IDREFRESH:
+								createADFList();
+							break;
 
-                        case IDLISTBROWSER:
-							selectedIndex = code;
-                        break;
+	                        case IDLISTBROWSER:
+								selectedIndex = code;
+        	                break;
 
-                        default:
-                        break;
-                    }
-                break;
+	                        default:
+    	                    break;
+        	            }
+            	    break;
                 
-                case WMHI_ICONIFY: /* iconify / uniconify */
-					iconify();		
-                break;
+	                case WMHI_ICONIFY: /* iconify / uniconify */
+						iconify();		
+        	        break;
 				
-				case WMHI_MENUPICK:
-					ProcessMenuIDCMPdacMenu(code);
-				break;
-				
-				case WMHI_RAWKEY:
-					switch(code)
-					{
-						case 0x45: // press ESC to quit
-							done=TRUE;
-						break;
-						
-						default:
-						break;
-					}
+					case WMHI_MENUPICK:
+						ProcessMenuIDCMPdacMenu(code);
 					break;
+				
+					case WMHI_RAWKEY:
+						switch(code)
+						{
+							case 0x45: // press ESC to quit
+								done=TRUE;
+							break;
+						
+							default:
+							break;
+						}
+						break;
 					
                 
-                default:
-                break;
+	                default:
+    	            break;
+				}   
 			}   
-		}   
+		}
 	}
-	
+
 	appTop = WindowPtr->TopEdge;
 	appLeft = WindowPtr->LeftEdge;
 	appWidth = WindowPtr->Width;
@@ -418,7 +487,8 @@ int appMain()
 	freeList(&adfList);
     ClearMenuStrip(WindowPtr);
 	FreeVisualInfo(VisualInfoPtr);
-	
+	removeEjectADFMenu(EjectADFItem, EjectADFMP);
+
 	// delete log file
 	Execute("Delete RAM:dacgui.log >NIL:", 0, 0); 
 
