@@ -34,6 +34,7 @@
 
 #include <workbench/startup.h>
 #include <workbench/workbench.h>
+#include <proto/commodities.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
 #include <proto/gadtools.h>

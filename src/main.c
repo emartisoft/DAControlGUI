@@ -1,4 +1,4 @@
-;/*
+/*
 ; To compile from the Shell, type: 'Execute main.c'
 delete /bin/DAControlGUI
 delete #?.o
@@ -50,6 +50,7 @@ BASEDEF(Utility);
 BASEDEF(GadTools);
 BASEDEF(Icon);
 BASEDEF(Workbench);
+BASEDEF(Cx);
 BASEDEF(Window);
 BASEDEF(Layout);
 BASEDEF(CheckBox);
@@ -181,6 +182,7 @@ int main(void)
 	OPENLIB(GadTools,   "gadtools.library");
 	OPENLIB(Intuition,  "intuition.library");
 	OPENLIB(Utility,    "utility.library");
+	OPENLIB(Cx,         "commodities.library");
 
 	ret = appMain();
 	
@@ -250,11 +252,53 @@ struct MsgPort *addEjectADFMenu(struct AppMenuItem **ejectADFItem)
 	return EjectADFMP;
 }
 
+unregisterCommodity(CxObj *CXBroker, struct MsgPort *CXMP)
+{
+	CxMsg *msg;
+
+	DeleteCxObj(CXBroker);
+	while(msg = (CxMsg *)GetMsg(CXMP))
+		ReplyMsg((struct Message *)msg);
+
+	DeletePort(CXMP);
+}
+
+struct MsgPort *registerCommodity(LONG CXPri, CxObj **CXBroker)
+{
+	struct MsgPort *CXMP = NULL;
+	struct NewBroker newbroker;
+	CxObj *broker = NULL;
+
+	if(CXMP = CreateMsgPort()) {
+		newbroker.nb_Version = NB_VERSION;
+		newbroker.nb_Name = APPNAME;
+		newbroker.nb_Title = APPNAME" "MAJOR"."MINOR"."BUILD;
+		newbroker.nb_Descr = "GUI for DAControl on AmigaOS 3.2";
+		newbroker.nb_Unique = NBU_UNIQUE | NBU_NOTIFY;
+		newbroker.nb_Flags = COF_SHOW_HIDE;
+		newbroker.nb_Pri = CXPri;
+		newbroker.nb_Port = CXMP;
+		newbroker.nb_ReservedChannel = 0;
+
+		if(broker = CxBroker(&newbroker, NULL)) {
+			ActivateCxObj(broker, 1L);
+			*CXBroker = broker;
+		}
+	}
+
+	return CXMP;
+}
+
 int appMain()
 {
 	ULONG result;
 	UWORD code;
 	ULONG wait = 0;
+	struct MsgPort *CXMP = NULL;
+	ULONG CXSignal = 0;
+	CxObj *CXBroker = NULL;
+	ULONG CXmsgid, CXmsgtype;
+	CxMsg *CXmsg;
 	struct MsgPort *EjectADFMP = NULL;
 	struct AppMenuItem *EjectADFItem = NULL;
 	ULONG EjectADFSignal = 0;
@@ -398,13 +442,42 @@ int appMain()
 	EjectADFMP = addEjectADFMenu(&EjectADFItem);
 	EjectADFSignal = (1 << EjectADFMP->mp_SigBit);
 
+	CXMP = registerCommodity(0, &CXBroker);
+	CXSignal = (1 << CXMP->mp_SigBit);
+
 	GetAttr(WINDOW_SigMask, WindowObjectPtr, &signal);
 
     while(!done)
     {   
-		wait = Wait(signal | (1 << WindowPtr->UserPort->mp_SigBit) | EjectADFSignal);
+		wait = Wait(signal | (1 << WindowPtr->UserPort->mp_SigBit) | EjectADFSignal | CXSignal);
 
-		if(wait & EjectADFSignal) {
+		if(wait & CXSignal) {
+			while(CXmsg = (CxMsg *)GetMsg(CXMP)) {
+				CXmsgid = CxMsgID(CXmsg);
+    	        CXmsgtype = CxMsgType(CXmsg);
+        	    ReplyMsg((struct Message *)CXmsg);
+
+				switch(CXmsgtype) {
+					case CXM_COMMAND:
+						switch(CXmsgid) {
+							case CXCMD_KILL:
+								done = TRUE;
+							break;
+							case CXCMD_APPEAR:
+							/* TODO: open window */
+							break;
+							case CXCMD_DISAPPEAR:
+							/* TODO: close window */
+							break;
+						}
+					break;
+					case CXM_IEVENT:
+						/* TODO: popup hotkey */
+					default:
+					break;
+				}
+			}
+		} else if(wait & EjectADFSignal) {
 			while(EjectADFMsg = (struct AppMessage *)GetMsg(EjectADFMP)) {
 				ejectADFMenu(EjectADFMsg);
 				ReplyMsg((struct Message *)EjectADFMsg);
@@ -488,6 +561,7 @@ int appMain()
     ClearMenuStrip(WindowPtr);
 	FreeVisualInfo(VisualInfoPtr);
 	removeEjectADFMenu(EjectADFItem, EjectADFMP);
+	unregisterCommodity(CXBroker, CXMP);
 
 	// delete log file
 	Execute("Delete RAM:dacgui.log >NIL:", 0, 0); 
@@ -561,6 +635,7 @@ void CloseLibs(void)
 	CLOSELIB(Intuition);
 	CLOSELIB(Utility);
 	CLOSELIB(GadTools);
+	CLOSELIB(Cx);
 	CLOSELIB(Workbench);
 	CLOSELIB(Icon);
     CLOSELIB(Layout);
