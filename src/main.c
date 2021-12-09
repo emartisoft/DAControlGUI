@@ -100,7 +100,8 @@ void createAdfWin(void);
 void setDisable(struct Gadget* gad, BOOL value);
 void createADFList(void);
 void buttonsDisable(BOOL b);
-void iconify(void);
+void iconify(BOOL addIcon);
+void uniconify(void);
 
 #define PREFFILEPATH	"SYS:Prefs/Env-Archive/DAControlGUI.prefs"
 void SavePrefs(void);
@@ -138,10 +139,16 @@ int selectedIndex;
 WORD count;
 struct List adfList;
 
+enum {
+	DACG_Eject = 1,
+	DACG_Show
+}
+
 char appPath[PATH_MAX+NAME_MAX];
 char curPath[PATH_MAX];
 char manualPath[PATH_MAX+NAME_MAX];
 
+struct MsgPort*     AppMenuMP = NULL;
 struct MsgPort*     AppPort = NULL;
 struct DiskObject*  dobj    = NULL;
 struct AppIcon*     appicon = NULL;
@@ -207,7 +214,7 @@ void ejectADFMenu(struct AppMessage *EjectADFMsg)
 	createADFList();
 
 	for(i = 0; i < EjectADFMsg->am_NumArgs; i++) {
-		if(EjectADFMsg->am_ArgList[i].wa_Name[0] = 0) {
+		if(EjectADFMsg->am_ArgList[i].wa_Name[0] == 0) {
 			NameFromLock(EjectADFMsg->am_ArgList[i].wa_Lock, &VolName, 104);
 			VolName[strlen(VolName)-1] = 0;
 			for(j = 0; j < MAX_LISTED_ADF; j++) {
@@ -223,33 +230,31 @@ void ejectADFMenu(struct AppMessage *EjectADFMsg)
 	createADFList();
 }
 
-void removeEjectADFMenu(struct AppMenuItem *ejectADFItem, struct MsgPort *EjectADFMP)
+void removeEjectADFMenu(struct AppMenuItem *ejectADFItem)
 {
 	struct AppMessage *appmsg = NULL;
 
 	RemoveAppMenuItem(ejectADFItem);
 
-	while(appmsg = (struct AppMessage *)GetMsg(EjectADFMP)) {
+	while(appmsg = (struct AppMessage *)GetMsg(AppMenuMP)) {
 		ReplyMsg((struct Message *)appmsg);
 	}
-	DeleteMsgPort(EjectADFMP);
+	DeleteMsgPort(AppMenuMP);
 }
 
-struct MsgPort *addEjectADFMenu(struct AppMenuItem **ejectADFItem)
+struct AppMenuItem *addEjectADFMenu(void)
 {
-	struct MsgPort *EjectADFMP = NULL;
 	struct AppMenuItem *appmenuitem = NULL;
 
-	if(EjectADFMP = CreateMsgPort()) {
-		appmenuitem = AddAppMenuItemA(0L, 0, "Eject ADF", EjectADFMP, NULL);
+	if(AppMenuMP = CreateMsgPort()) {
+		appmenuitem = AddAppMenuItemA(DACG_Eject, 0, "Eject ADF", AppMenuMP, NULL);
 		if(appmenuitem == NULL) {
-			DeleteMsgPort(EjectADFMP);
-			EjectADFMP = NULL;
+			DeleteMsgPort(AppMenuMP);
+			AppMenuMP = NULL;
 		}
 	}
 
-	*ejectADFItem = appmenuitem;
-	return EjectADFMP;
+	return appmenuitem;
 }
 
 unregisterCommodity(CxObj *CXBroker, struct MsgPort *CXMP)
@@ -299,10 +304,9 @@ int appMain()
 	CxObj *CXBroker = NULL;
 	ULONG CXmsgid, CXmsgtype;
 	CxMsg *CXmsg;
-	struct MsgPort *EjectADFMP = NULL;
 	struct AppMenuItem *EjectADFItem = NULL;
-	ULONG EjectADFSignal = 0;
-	struct AppMessage *EjectADFMsg;
+	ULONG AppMenuSignal = 0;
+	struct AppMessage *AppMenuMsg;
 
 	ScreenPtr = LockPubScreen(NULL);
     VisualInfoPtr = GetVisualInfoA(ScreenPtr, NULL);
@@ -439,8 +443,8 @@ int appMain()
     makeMenu(VisualInfoPtr);
     SetMenuStrip(WindowPtr, dacMenu);
 	createADFList();
-	EjectADFMP = addEjectADFMenu(&EjectADFItem);
-	EjectADFSignal = (1 << EjectADFMP->mp_SigBit);
+	EjectADFItem = addEjectADFMenu();
+	AppMenuSignal = (1 << AppMenuMP->mp_SigBit);
 
 	CXMP = registerCommodity(0, &CXBroker);
 	CXSignal = (1 << CXMP->mp_SigBit);
@@ -449,7 +453,7 @@ int appMain()
 
     while(!done)
     {   
-		wait = Wait(signal | (1 << WindowPtr->UserPort->mp_SigBit) | EjectADFSignal | CXSignal);
+		wait = Wait(signal | (1 << WindowPtr->UserPort->mp_SigBit) | AppMenuSignal | CXSignal);
 
 		if(wait & CXSignal) {
 			while(CXmsg = (CxMsg *)GetMsg(CXMP)) {
@@ -464,10 +468,10 @@ int appMain()
 								done = TRUE;
 							break;
 							case CXCMD_APPEAR:
-							/* TODO: open window */
+								uniconify();
 							break;
 							case CXCMD_DISAPPEAR:
-							/* TODO: close window */
+								iconify(FALSE);
 							break;
 						}
 					break;
@@ -477,10 +481,17 @@ int appMain()
 					break;
 				}
 			}
-		} else if(wait & EjectADFSignal) {
-			while(EjectADFMsg = (struct AppMessage *)GetMsg(EjectADFMP)) {
-				ejectADFMenu(EjectADFMsg);
-				ReplyMsg((struct Message *)EjectADFMsg);
+		} else if(wait & AppMenuSignal) {
+			while(AppMenuMsg = (struct AppMessage *)GetMsg(AppMenuMP)) {
+				switch(AppMenuMsg->am_ID) {
+					case DACG_Eject:
+						ejectADFMenu(AppMenuMsg);
+					break;
+					case DACG_Show:
+						uniconify();
+					break;
+				}
+				ReplyMsg((struct Message *)AppMenuMsg);
 			}
 		} else {
 	        while ((result = DoMethod(WindowObjectPtr, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG)
@@ -524,7 +535,7 @@ int appMain()
             	    break;
                 
 	                case WMHI_ICONIFY: /* iconify / uniconify */
-						iconify();		
+						iconify(TRUE);		
         	        break;
 				
 					case WMHI_MENUPICK:
@@ -560,8 +571,12 @@ int appMain()
 	freeList(&adfList);
     ClearMenuStrip(WindowPtr);
 	FreeVisualInfo(VisualInfoPtr);
-	removeEjectADFMenu(EjectADFItem, EjectADFMP);
+
+	if(appicon) RemoveAppIcon(appicon);
+	if(appmenuitem) RemoveAppMenuItem(appmenuitem);
+
 	unregisterCommodity(CXBroker, CXMP);
+	removeEjectADFMenu(EjectADFItem);
 
 	// delete log file
 	Execute("Delete RAM:dacgui.log >NIL:", 0, 0); 
@@ -669,7 +684,7 @@ void ProcessMenuIDCMPdacMenu(UWORD MenuNumber)
 						About();
 						break;
 					case DAControlGUIMenuIconify :
-						iconify();
+						iconify(TRUE);
 						break;
 					case DAControlGUIMenuQuit :
                         done=TRUE;
@@ -1404,16 +1419,14 @@ void SavePrefs(void)
 	}
 }
 
-void iconify(void)
+void uniconify(void)
 {
-	AppPort = CreateMsgPort();
-	appicon=AddAppIconA(0L, 0L, "DAControlGUI", AppPort, NULL, dobj, NULL);
-	appmenuitem=AddAppMenuItemA(0L, 0L, "DAControlGUI", AppPort, NULL);
-	RA_CloseWindow(WindowObjectPtr);
-	WindowPtr = NULL;
-	WaitPort(AppPort);
-	RemoveAppIcon(appicon);
-	RemoveAppMenuItem(appmenuitem);
+	if(appicon) RemoveAppIcon(appicon);
+	if(appmenuitem) RemoveAppMenuItem(appmenuitem);
+
+	appicon = NULL;
+	appmenuitem = NULL;
+
 	WindowPtr = (struct Window *) RA_OpenWindow(WindowObjectPtr);
 
 	if (WindowPtr)
@@ -1425,4 +1438,14 @@ void iconify(void)
 	{
 		done = TRUE;
 	}
+}
+
+void iconify(BOOL addIcon)
+{
+	if(addIcon) {
+		appicon=AddAppIconA(DACG_Show, 0L, "DAControlGUI", AppMenuMP, NULL, dobj, NULL);
+		appmenuitem=AddAppMenuItemA(DACG_Show, 0L, "DAControlGUI", AppMenuMP, NULL);
+	}
+	RA_CloseWindow(WindowObjectPtr);
+	WindowPtr = NULL;
 }
