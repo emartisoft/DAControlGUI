@@ -151,6 +151,7 @@ char manualPath[PATH_MAX+NAME_MAX];
 
 BOOL CXpopup = TRUE;
 LONG CXpri = 0;
+BOOL EjectMenu = TRUE;
 
 struct MsgPort*     AppMenuMP = NULL;
 struct MsgPort*     AppPort = NULL;
@@ -219,6 +220,12 @@ void getTooltypes(UBYTE **tooltypes)
 	}
 
 	CXpri = ArgInt(tooltypes, "CX_PRIORITY", 0);
+	
+	if(FindToolType(tooltypes, "NOEJECTMENU")) {
+		EjectMenu = FALSE;
+	}
+	
+	
 }
 
 
@@ -259,6 +266,8 @@ void removeEjectADFMenu(struct AppMenuItem *ejectADFItem)
 {
 	struct AppMessage *appmsg = NULL;
 
+	if(EjectMenu == FALSE) return;
+
 	RemoveAppMenuItem(ejectADFItem);
 
 	while(appmsg = (struct AppMessage *)GetMsg(AppMenuMP)) {
@@ -269,6 +278,8 @@ void removeEjectADFMenu(struct AppMenuItem *ejectADFItem)
 
 struct AppMenuItem *addEjectADFMenu(void)
 {
+	if(EjectMenu == FALSE) return;
+
 	struct AppMenuItem *appmenuitem = NULL;
 
 	if(AppMenuMP = CreateMsgPort()) {
