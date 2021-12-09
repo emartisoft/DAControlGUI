@@ -632,7 +632,7 @@ int appMain()
 	removeEjectADFMenu(EjectADFItem);
 
 	// delete log file
-	Execute("Delete RAM:dacgui.log >NIL:", 0, 0); 
+	Execute("Delete T:dacgui.log >NIL:", 0, 0); 
 
 	return 0;
 }
@@ -879,8 +879,8 @@ void createADFList(void)
 	//int x;
 	BPTR fp;
 	BOOL ejectDisable = FALSE;
-    RunDAControl("INFO SHOWVOLUMES >RAM:dacgui.log");
-    fp = Open("RAM:dacgui.log", MODE_OLDFILE);
+    RunDAControl("INFO SHOWVOLUMES >T:dacgui.log");
+    fp = Open("T:dacgui.log", MODE_OLDFILE);
     count=0;
 	
     if(fp)
