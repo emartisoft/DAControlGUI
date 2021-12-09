@@ -1,4 +1,4 @@
-/*
+;/*
 ; To compile from the Shell, type: 'Execute main.c'
 delete /bin/DAControlGUI
 delete #?.o
