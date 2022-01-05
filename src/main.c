@@ -143,7 +143,7 @@ struct List adfList;
 enum {
 	DACG_Eject = 1,
 	DACG_Show
-}
+};
 
 char appPath[PATH_MAX+NAME_MAX];
 char curPath[PATH_MAX];
@@ -278,9 +278,9 @@ void removeEjectADFMenu(struct AppMenuItem *ejectADFItem)
 
 struct AppMenuItem *addEjectADFMenu(void)
 {
-	if(EjectMenu == FALSE) return;
-
 	struct AppMenuItem *appmenuitem = NULL;
+	
+	if(EjectMenu == FALSE) return;
 
 	if(AppMenuMP = CreateMsgPort()) {
 		appmenuitem = AddAppMenuItemA(DACG_Eject, 0, "Eject ADF", AppMenuMP, NULL);
