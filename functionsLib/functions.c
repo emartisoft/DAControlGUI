@@ -21,12 +21,12 @@ BOOL fileExist(STRPTR filePath)
 /*===============================
  RunDAControl
 ===============================*/
-void RunDAControl(char parameter[BUFFERSIZE])
+void RunDAControl(char *parameter)
 {
     char dacontrolPATH[BUFFERSIZE];
     strcpy(dacontrolPATH, "SYS:C/DAControl ");
     strcat(dacontrolPATH, parameter);
-    Execute(dacontrolPATH, NULL, NULL); 
+    Execute(dacontrolPATH, 0, 0); 
 }
 
 /*===============================
@@ -79,7 +79,7 @@ char* fulltrim(char* str)
     return str;
 }
 
-extern BOOL isContainsAdfExt(STRPTR filePath)
+BOOL isContainsAdfExt(STRPTR filePath)
 {
     int i;
     char * isPointAdfStr;

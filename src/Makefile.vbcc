@@ -1,0 +1,14 @@
+CC := vc +aos68k
+CFLAGS := -c99
+LIBS := -lfunctions -lamiga -lreaction
+
+OBJS := main.o
+DEPS := menu.h includes.h version.h
+
+all: DAControlGUI
+
+%.o: %.c $(DEPS)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+DAControlGUI: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)

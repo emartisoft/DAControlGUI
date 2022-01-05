@@ -42,10 +42,15 @@ NOSTanDardIO
 
 #include "includes.h"
 #include "menu.h"
+#include "functions.h"
 #include "version.h"
 
+BASEDEF(Intuition);
+BASEDEF(Utility);
+BASEDEF(GadTools);
 BASEDEF(Icon);
 BASEDEF(Workbench);
+BASEDEF(Cx);
 BASEDEF(Window);
 BASEDEF(Layout);
 BASEDEF(CheckBox);
@@ -95,7 +100,9 @@ void createAdfWin(void);
 void setDisable(struct Gadget* gad, BOOL value);
 void createADFList(void);
 void buttonsDisable(BOOL b);
-void iconify(void);
+void iconify(BOOL addIcon);
+void uniconify(void);
+void getTooltypes(UBYTE **tooltypes);
 
 #define PREFFILEPATH	"SYS:Prefs/Env-Archive/DAControlGUI.prefs"
 void SavePrefs(void);
@@ -133,10 +140,20 @@ int selectedIndex;
 WORD count;
 struct List adfList;
 
+enum {
+	DACG_Eject = 1,
+	DACG_Show
+};
+
 char appPath[PATH_MAX+NAME_MAX];
 char curPath[PATH_MAX];
 char manualPath[PATH_MAX+NAME_MAX];
 
+BOOL CXpopup = TRUE;
+LONG CXpri = 0;
+BOOL EjectMenu = TRUE;
+
+struct MsgPort*     AppMenuMP = NULL;
 struct MsgPort*     AppPort = NULL;
 struct DiskObject*  dobj    = NULL;
 struct AppIcon*     appicon = NULL;
@@ -145,10 +162,13 @@ struct AppMenuItem* appmenuitem = NULL;
 
 int selectedDeviceNo;
 
-int main(void)
+int main(int argc, char **argv)
 {
 	int ret = 0;
-	
+	UBYTE **tooltypes;
+	char i;
+	int olddir;
+
 	if(!fileExist("SYS:C/DAControl"))  // do you have os 3.2?
     {
        AppTerminate();
@@ -174,12 +194,40 @@ int main(void)
 	OPENLIB(Dos,        "dos.library");
 	OPENLIB(Icon,       "icon.library");
 	OPENLIB(Workbench,  "workbench.library");
+	OPENLIB(GadTools,   "gadtools.library");
+	OPENLIB(Intuition,  "intuition.library");
+	OPENLIB(Utility,    "utility.library");
+	OPENLIB(Cx,         "commodities.library");
+
+	tooltypes = ArgArrayInit(argc, argv);
+	getTooltypes(tooltypes);
+	ArgArrayDone();
 
 	ret = appMain();
 	
 	CloseLibs();
 	return ret;
 }
+
+void getTooltypes(UBYTE **tooltypes)
+{
+	char *s;
+	
+	s = ArgString(tooltypes, "CX_POPUP", "YES");
+
+	if(MatchToolValue(s, "NO")) {
+		CXpopup = FALSE;
+	}
+
+	CXpri = ArgInt(tooltypes, "CX_PRIORITY", 0);
+	
+	if(FindToolType(tooltypes, "NOEJECTMENU")) {
+		EjectMenu = FALSE;
+	}
+	
+	
+}
+
 
 int makeMenu(APTR MenuVisualInfo)
 {
@@ -188,13 +236,119 @@ int makeMenu(APTR MenuVisualInfo)
     return( 0L );
 }
 
+void ejectADFMenu(struct AppMessage *EjectADFMsg)
+{
+	ULONG i = 0, j = 0;
+	char VolName[104];
+	int index = -1;
+
+	/* Make sure our list is up-to-date before searching it */
+	createADFList();
+
+	for(i = 0; i < EjectADFMsg->am_NumArgs; i++) {
+		if(EjectADFMsg->am_ArgList[i].wa_Name[0] == 0) {
+			NameFromLock(EjectADFMsg->am_ArgList[i].wa_Lock, &VolName, 104);
+			VolName[strlen(VolName)-1] = 0;
+			for(j = 0; j < MAX_LISTED_ADF; j++) {
+				if(strcmp(col2[j], VolName) == 0) {
+					index = j;
+					break;
+				}
+			}
+			if(index>=0) Eject(col1[index]);
+		}
+	}
+
+	createADFList();
+}
+
+void removeEjectADFMenu(struct AppMenuItem *ejectADFItem)
+{
+	struct AppMessage *appmsg = NULL;
+
+	if(EjectMenu == FALSE) return;
+
+	RemoveAppMenuItem(ejectADFItem);
+
+	while(appmsg = (struct AppMessage *)GetMsg(AppMenuMP)) {
+		ReplyMsg((struct Message *)appmsg);
+	}
+	DeleteMsgPort(AppMenuMP);
+}
+
+struct AppMenuItem *addEjectADFMenu(void)
+{
+	struct AppMenuItem *appmenuitem = NULL;
+	
+	if(EjectMenu == FALSE) return;
+
+	if(AppMenuMP = CreateMsgPort()) {
+		appmenuitem = AddAppMenuItemA(DACG_Eject, 0, "Eject ADF", AppMenuMP, NULL);
+		if(appmenuitem == NULL) {
+			DeleteMsgPort(AppMenuMP);
+			AppMenuMP = NULL;
+		}
+	}
+
+	return appmenuitem;
+}
+
+unregisterCommodity(CxObj *CXBroker, struct MsgPort *CXMP)
+{
+	CxMsg *msg;
+
+	DeleteCxObj(CXBroker);
+	while(msg = (CxMsg *)GetMsg(CXMP))
+		ReplyMsg((struct Message *)msg);
+
+	DeletePort(CXMP);
+}
+
+struct MsgPort *registerCommodity(CxObj **CXBroker)
+{
+	struct MsgPort *CXMP = NULL;
+	struct NewBroker newbroker;
+	CxObj *broker = NULL;
+
+	if(CXMP = CreateMsgPort()) {
+		newbroker.nb_Version = NB_VERSION;
+		newbroker.nb_Name = APPNAME;
+		newbroker.nb_Title = APPNAME" "MAJOR"."MINOR"."BUILD;
+		newbroker.nb_Descr = "GUI for DAControl on AmigaOS 3.2";
+		newbroker.nb_Unique = NBU_UNIQUE | NBU_NOTIFY;
+		newbroker.nb_Flags = COF_SHOW_HIDE;
+		newbroker.nb_Pri = CXpri;
+		newbroker.nb_Port = CXMP;
+		newbroker.nb_ReservedChannel = 0;
+
+		if(broker = CxBroker(&newbroker, NULL)) {
+			ActivateCxObj(broker, 1L);
+			*CXBroker = broker;
+		} else {
+			DeleteMsgPort(CXMP);
+			return NULL;
+		}
+	}
+
+	return CXMP;
+}
+
 int appMain()
 {
 	ULONG result;
 	UWORD code;
+	ULONG wait = 0;
+	struct MsgPort *CXMP = NULL;
+	ULONG CXSignal = 0;
+	CxObj *CXBroker = NULL;
+	ULONG CXmsgid, CXmsgtype;
+	CxMsg *CXmsg;
+	struct AppMenuItem *EjectADFItem = NULL;
+	ULONG AppMenuSignal = 0;
+	struct AppMessage *AppMenuMsg;
 
 	ScreenPtr = LockPubScreen(NULL);
-    VisualInfoPtr = GetVisualInfo(ScreenPtr, NULL);
+    VisualInfoPtr = GetVisualInfoA(ScreenPtr, NULL);
 	//InitHook(&HookStruct, HookFunc, NULL);
 	
 	
@@ -211,7 +365,7 @@ int appMain()
 	dobj=GetDiskObject(appPath);
     if(dobj!=0)
 	{
-		dobj->do_Type=NULL;
+		dobj->do_Type=0;
 	}
 
     if (!(WindowObjectPtr = NewObject
@@ -316,92 +470,151 @@ int appMain()
         done=TRUE;
     }
 	
-    UnlockPubScreen(ScreenPtr);
+    UnlockPubScreen(NULL, ScreenPtr);
     ScreenPtr = NULL;
+    makeMenu(VisualInfoPtr);
+	
+	CXMP = registerCommodity(&CXBroker);
+	if(CXMP) {
+		CXSignal = (1 << CXMP->mp_SigBit);
+	} else {
+		CXpopup = FALSE;
+		done = TRUE;
+	}
 
-    if (!(WindowPtr = (struct Window *) DoMethod(WindowObjectPtr, WM_OPEN, NULL)))
-    {   
-        done=TRUE;
+    if(CXpopup) {
+	if (!(WindowPtr = (struct Window *) DoMethod(WindowObjectPtr, WM_OPEN, NULL)))
+        {
+            done=TRUE;
+        }
+	GetAttr(WINDOW_SigMask, WindowObjectPtr, &signal);
+	SetMenuStrip(WindowPtr, dacMenu);
     }
 
-	
-    makeMenu(VisualInfoPtr);
-    SetMenuStrip(WindowPtr, dacMenu);
+
 	createADFList();
-	
-	GetAttr(WINDOW_SigMask, WindowObjectPtr, &signal);
+	EjectADFItem = addEjectADFMenu();
+	AppMenuSignal = (1 << AppMenuMP->mp_SigBit);
 
     while(!done)
     {   
-		Wait(signal | (1 << WindowPtr->UserPort->mp_SigBit));
+		wait = Wait(signal | (1 << WindowPtr->UserPort->mp_SigBit) | AppMenuSignal | CXSignal);
 
-        while ((result = DoMethod(WindowObjectPtr, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG)
-        {   switch (result & WMHI_CLASSMASK)
-            {
-                case WMHI_CLOSEWINDOW:
-                    done = TRUE;
-                break;
+		if(wait & CXSignal) {
+			while(CXmsg = (CxMsg *)GetMsg(CXMP)) {
+				CXmsgid = CxMsgID(CXmsg);
+				CXmsgtype = CxMsgType(CXmsg);
+				ReplyMsg((struct Message *)CXmsg);
 
-                case WMHI_GADGETUP:
-                    switch(result & WMHI_GADGETMASK)
-                    {
-                        
-                        case IDLOADCHANGE:
-                            loadChangeAdfWin();
-                        break;
+				switch(CXmsgtype) {
+					case CXM_COMMAND:
+						switch(CXmsgid) {
+							case CXCMD_KILL:
+								done = TRUE;
+							break;
+							case CXCMD_APPEAR:
+							case CXCMD_UNIQUE:
+								uniconify();
+							break;
+							case CXCMD_DISAPPEAR:
+								iconify(FALSE);
+							break;
+							
+							/* Nothing to disable yet, here for later use */
+							case CXCMD_ENABLE:
+							case CXCMD_DISABLE:
+							default:
+							break;
 
-                        case IDCREATE:
-                            createAdfWin();
-                        break;
-
-                        case IDEJECT:
-                            clickEject();
-                        break;
-						
-						case IDEJECTALL:
-							clickEjectAll();
-                        break;
-
-						case IDREFRESH:
-							createADFList();
-						break;
-
-                        case IDLISTBROWSER:
-							selectedIndex = code;
-                        break;
-
-                        default:
-                        break;
-                    }
-                break;
-                
-                case WMHI_ICONIFY: /* iconify / uniconify */
-					iconify();		
-                break;
-				
-				case WMHI_MENUPICK:
-					ProcessMenuIDCMPdacMenu(code);
-				break;
-				
-				case WMHI_RAWKEY:
-					switch(code)
-					{
-						case 0x45: // press ESC to quit
-							done=TRUE;
-						break;
-						
-						default:
-						break;
-					}
+						}
 					break;
+					case CXM_IEVENT:
+						/* TODO: popup hotkey */
+					default:
+					break;
+				}
+			}
+		} else if(wait & AppMenuSignal) {
+			while(AppMenuMsg = (struct AppMessage *)GetMsg(AppMenuMP)) {
+				switch(AppMenuMsg->am_ID) {
+					case DACG_Eject:
+						ejectADFMenu(AppMenuMsg);
+					break;
+					case DACG_Show:
+						uniconify();
+					break;
+				}
+				ReplyMsg((struct Message *)AppMenuMsg);
+			}
+		} else {
+	        while ((result = DoMethod(WindowObjectPtr, WM_HANDLEINPUT, &code)) != WMHI_LASTMSG)
+    	    {   switch (result & WMHI_CLASSMASK)
+        	    {
+            	    case WMHI_CLOSEWINDOW:
+                	    done = TRUE;
+	                break;
+
+	                case WMHI_GADGETUP:
+    	                switch(result & WMHI_GADGETMASK)
+        	            {
+                        
+            	            case IDLOADCHANGE:
+                	            loadChangeAdfWin();
+                    	    break;
+
+	                        case IDCREATE:
+    	                        createAdfWin();
+        	                break;
+
+	                        case IDEJECT:
+    	                        clickEject();
+        	                break;
+						
+							case IDEJECTALL:
+								clickEjectAll();
+        	                break;
+
+							case IDREFRESH:
+								createADFList();
+							break;
+
+	                        case IDLISTBROWSER:
+								selectedIndex = code;
+        	                break;
+
+	                        default:
+    	                    break;
+        	            }
+            	    break;
+                
+	                case WMHI_ICONIFY: /* iconify / uniconify */
+						iconify(TRUE);		
+        	        break;
+				
+					case WMHI_MENUPICK:
+						ProcessMenuIDCMPdacMenu(code);
+					break;
+				
+					case WMHI_RAWKEY:
+						switch(code)
+						{
+							case 0x45: // press ESC to quit
+								done=TRUE;
+							break;
+						
+							default:
+							break;
+						}
+						break;
 					
                 
-                default:
-                break;
+	                default:
+    	            break;
+				}   
 			}   
-		}   
+		}
 	}
-	
+
 	appTop = WindowPtr->TopEdge;
 	appLeft = WindowPtr->LeftEdge;
 	appWidth = WindowPtr->Width;
@@ -411,9 +624,15 @@ int appMain()
 	freeList(&adfList);
     ClearMenuStrip(WindowPtr);
 	FreeVisualInfo(VisualInfoPtr);
-	
+
+	if(appicon) RemoveAppIcon(appicon);
+	if(appmenuitem) RemoveAppMenuItem(appmenuitem);
+
+	unregisterCommodity(CXBroker, CXMP);
+	removeEjectADFMenu(EjectADFItem);
+
 	// delete log file
-	Execute("Delete RAM:dacgui.log >NIL:", NULL, NULL); 
+	Execute("Delete T:dacgui.log >NIL:", 0, 0); 
 
 	return 0;
 }
@@ -467,7 +686,7 @@ void CloseLibs(void)
 {
   	if (ScreenPtr)
     {   
-		UnlockPubScreen(NULL);
+		UnlockPubScreen(NULL, ScreenPtr);
         ScreenPtr = NULL;
     }
 	
@@ -481,6 +700,10 @@ void CloseLibs(void)
 	
 	if (AppPort) DeleteMsgPort(AppPort);
 	
+	CLOSELIB(Intuition);
+	CLOSELIB(Utility);
+	CLOSELIB(GadTools);
+	CLOSELIB(Cx);
 	CLOSELIB(Workbench);
 	CLOSELIB(Icon);
     CLOSELIB(Layout);
@@ -514,7 +737,7 @@ void ProcessMenuIDCMPdacMenu(UWORD MenuNumber)
 						About();
 						break;
 					case DAControlGUIMenuIconify :
-						iconify();
+						iconify(TRUE);
 						break;
 					case DAControlGUIMenuQuit :
                         done=TRUE;
@@ -553,7 +776,7 @@ void ProcessMenuIDCMPdacMenu(UWORD MenuNumber)
 						break;
 
 					case HelpMenuManual :
-						Execute(manualPath, NULL, NULL); 
+						Execute(manualPath, 0, 0); 
 						break;
 				}
 				break;
@@ -656,13 +879,13 @@ void createADFList(void)
 	//int x;
 	BPTR fp;
 	BOOL ejectDisable = FALSE;
-    RunDAControl("INFO SHOWVOLUMES >RAM:dacgui.log");
-    fp = Open("RAM:dacgui.log", MODE_OLDFILE);
+    RunDAControl("INFO SHOWVOLUMES >T:dacgui.log");
+    fp = Open("T:dacgui.log", MODE_OLDFILE);
     count=0;
 	
     if(fp)
     {
-        UBYTE buffer[BUFFERSIZE];
+        char *buffer = AllocVec(BUFFERSIZE, MEMF_CLEAR);
         while(FGets(fp, buffer, BUFFERSIZE))
         {
             if((count>0)&&(strlen(buffer)>0))
@@ -672,7 +895,7 @@ void createADFList(void)
                 col2[count-1]= fulltrim(substring(buffer, 18, 32)); // volume name
                 col4[count-1]= fulltrim(substring(buffer, 79, 11)); // access
                 col5[count-1]= fulltrim(substring(buffer, 91, strlen(buffer)-90)); // file
-                free(buffer);
+                FreeVec(buffer);
             }
             count++;
         }
@@ -1249,16 +1472,14 @@ void SavePrefs(void)
 	}
 }
 
-void iconify(void)
+void uniconify(void)
 {
-	AppPort = CreateMsgPort();
-	appicon=AddAppIconA(0L, 0L, "DAControlGUI", AppPort, NULL, dobj, NULL);
-	appmenuitem=AddAppMenuItemA(0L, 0L, "DAControlGUI", AppPort, NULL);
-	RA_CloseWindow(WindowObjectPtr);
-	WindowPtr = NULL;
-	WaitPort(AppPort);
-	RemoveAppIcon(appicon);
-	RemoveAppMenuItem(appmenuitem);
+	if(appicon) RemoveAppIcon(appicon);
+	if(appmenuitem) RemoveAppMenuItem(appmenuitem);
+
+	appicon = NULL;
+	appmenuitem = NULL;
+
 	WindowPtr = (struct Window *) RA_OpenWindow(WindowObjectPtr);
 
 	if (WindowPtr)
@@ -1270,4 +1491,14 @@ void iconify(void)
 	{
 		done = TRUE;
 	}
+}
+
+void iconify(BOOL addIcon)
+{
+	if(addIcon) {
+		appicon=AddAppIconA(DACG_Show, 0L, "DAControlGUI", AppMenuMP, NULL, dobj, NULL);
+		appmenuitem=AddAppMenuItemA(DACG_Show, 0L, "DAControlGUI", AppMenuMP, NULL);
+	}
+	RA_CloseWindow(WindowObjectPtr);
+	WindowPtr = NULL;
 }

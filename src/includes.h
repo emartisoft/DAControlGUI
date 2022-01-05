@@ -32,8 +32,19 @@
 #include <proto/string.h>
 #include <gadgets/string.h>
 
+#include <workbench/startup.h>
 #include <workbench/workbench.h>
+#include <proto/commodities.h>
 #include <proto/dos.h>
+#include <proto/exec.h>
+#include <proto/gadtools.h>
+#include <proto/icon.h>
+#include <proto/intuition.h>
+#include <proto/utility.h>
+#include <proto/wb.h>
+
+#include <clib/alib_protos.h>
+#include <clib/reaction_lib_protos.h>
 
 #define  ALL_REACTION_MACROS
 #define  ALL_REACTION_CLASSES
